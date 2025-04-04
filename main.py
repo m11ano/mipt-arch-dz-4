@@ -1,20 +1,47 @@
 import asyncio
-from converters import *
+from converters import (
+    UsdRubConverter,
+    UsdEurConverter,
+    UsdGbpConverter,
+    UsdCnyConverter
+)
 
-def main():    
-    amount = int(input('Введите значение в USD: \n'))
-    
-    converter = UsdRubConverter()
-    print(f"{amount} USD to RUB: {converter.convert_usd_to_rub(amount)}")
-    
-    converter = UsdEurConverter()
-    print(f"{amount} USD to EUR: {converter.convert_usd_to_eur(amount)}")
-    
-    converter = UsdGbpConverter()
-    print(f"{amount} USD to GBP: {converter.convert_usd_to_gbp(amount)}")
-    
-    converter = UsdCnyConverter()
-    print(f"{amount} USD to CNY: {converter.convert_usd_to_cny(amount)}")
+# Создадим фабрику конвертеров
+def converter_factory(ticker: str):
+    match ticker.upper():
+        case 'RUB':
+            return UsdRubConverter()
+        case 'EUR':
+            return UsdEurConverter()
+        case 'GBP':
+            return UsdGbpConverter()
+        case 'CNY':
+            return UsdCnyConverter()
+        case _:
+            raise ValueError(f"Неизвестный тикер валюты: {ticker}")
+
+async def main():
+
+    # Добавим обработку ошибок на случай ввода не числа
+    amount_str = input('Введите сумму в USD: \n')
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        print("Ошибка ввода. Введите число.")
+        return
+
+    currency_list = ['RUB', 'EUR', 'GBP', 'CNY']
+
+    tasks = []
+    for cur in currency_list:
+        converter = converter_factory(cur)
+        tasks.append(asyncio.create_task(converter.convert(amount)))
+
+    results = await asyncio.gather(*tasks)
+
+    # Выводим результаты
+    for cur, res in zip(currency_list, results):
+        print(f"{amount} USD to {cur}: {res:.2f}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
